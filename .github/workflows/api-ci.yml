@@ -71,7 +71,10 @@ jobs:
           az containerapp update \
             --name ${{ secrets.AZURE_CONTAINER_APP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:api-latest \
+            --registry-server ${{ env.REGISTRY }} \
+            --registry-username ${{ secrets.DOCKERHUB_USERNAME }} \
+            --registry-password ${{ secrets.DOCKERHUB_TOKEN }}
             --set-env-vars \
               SPRING_PROFILES_ACTIVE=${{ secrets.SPRING_PROFILE }} \
               AZURE_SQL_URL=${{ secrets.AZURE_SQL_URL }} \
