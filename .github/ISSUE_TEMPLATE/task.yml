@@ -1,0 +1,27 @@
+name: ✅ Task
+description: Development task or chore
+labels: ["task"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [API, iOS, Android, Infrastructure, Docs]
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      placeholder: "- [ ] Step 1\n- [ ] Step 2"
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone
+      options: [M1-API, M2-iOS, M3-Android, M4-Launch]
