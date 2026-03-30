@@ -44,9 +44,11 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- SQL Server JDBC Driver -->
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
+			<groupId>com.microsoft.sqlserver</groupId>
+			<artifactId>mssql-jdbc</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
