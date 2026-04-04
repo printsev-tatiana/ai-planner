@@ -1,4 +1,4 @@
-package com.example.api.shared.domain;
+package com.tp.aiplanner.domain.common;
 
 import java.util.ArrayList;
 import java.util.Collections;
