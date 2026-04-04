@@ -21,20 +21,20 @@ az ad sp create-for-rbac \
 ### 2. Azure Database Password
 **Secret Name:** `AZURE_DB_PASSWORD`
 
-**Value:** The SQL Server `sa` user password (e.g., `YourAzurePasswordHere123!`)
+**Value:** The PostgreSQL `pgadmin` user password (e.g., `YourAzurePasswordHere123!`)
 
 ### 3. Azure Database URL
 **Secret Name:** `AZURE_DB_URL`
 
 **Value:** Full JDBC connection string
 ```
-jdbc:sqlserver://ai-planner-sqlserver.database.windows.net:1433;database=aiplanner;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;
+jdbc:postgresql://ai-planner-postgres.postgres.database.azure.com:5432/aiplanner?sslmode=require
 ```
 
 ### 4. Azure Database Username
 **Secret Name:** `AZURE_DB_USERNAME`
 
-**Value:** `sqladmin@ai-planner-sqlserver`
+**Value:** `pgadmin@ai-planner-postgres`
 
 ### 5. Azure App Name
 **Secret Name:** `AZURE_APP_NAME`
@@ -100,7 +100,7 @@ The command will output something like:
 - **Deploy to Azure**: Push to `main` branch only
 
 ### Workflow Steps
-1. **Migrate** - Tests migrations against local SQL Server in Docker
+1. **Migrate** - Tests migrations against local PostgreSQL in Docker
 2. **Deploy to Azure** - Runs migrations and deploys to Azure App Service (main only)
 
 ---
@@ -135,7 +135,7 @@ az webapp deployment source config-zip \
 
 ### Workflow Fails at Migration Step
 1. Check `AZURE_DB_*` secrets are correctly set
-2. Verify Azure SQL Database exists and is accessible
+2. Verify Azure Database for PostgreSQL exists and is accessible
 3. Check firewall rules allow GitHub runners
 4. Review workflow logs for specific error messages
 
@@ -166,6 +166,6 @@ az ad sp delete --id {client-id}
 ❌ **DON'T:**
 - Commit secrets in code or configuration files
 - Share secret values outside GitHub
-- Use weak passwords for SQL Server
+- Use weak passwords for PostgreSQL
 - Store plaintext passwords in documentation
 
