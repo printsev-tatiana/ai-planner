@@ -11,7 +11,6 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/ai-planner
-  AZURE_CONTAINER_APP_ENV: managedEnvironment-aiplannerprod-921c
 
 jobs:
   build-and-push:

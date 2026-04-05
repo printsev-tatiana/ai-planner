@@ -1,6 +1,6 @@
 # 🧠 AI Planner App — Solo Founder MVP Technical Plan
 
-> **Stack:** Spring Boot 3 (Java 21) · Swift (iOS) · Java/Jetpack Compose (Android) · Azure · PostgreSQL · Docker · GitHub Actions
+> **Stack:** Spring Boot 3 (Java 21) · Swift (iOS) · Java/Jetpack Compose (Android) · PostgreSQL · Docker · GitHub Actions
 
 ---
 
@@ -15,12 +15,11 @@
 7. [Background Messaging — Email & Notifications](#7-background-messaging--email--notifications)
 8. [Stripe Integration — Premium Subscriptions](#8-stripe-integration--premium-subscriptions)
 9. [Docker — Build & Local Dev](#9-docker--build--local-dev)
-10. [Azure Infrastructure Setup](#10-azure-infrastructure-setup)
-11. [CI/CD — GitHub Actions Pipeline](#11-cicd--github-actions-pipeline)
-12. [iOS App — Swift](#12-ios-app--swift)
-13. [Android App — Java / Jetpack Compose](#13-android-app--java--jetpack-compose)
-14. [Documentation — Docs as Code](#14-documentation--docs-as-code)
-15. [Milestones & Solo Execution Order](#15-milestones--solo-execution-order)
+10. [CI/CD — GitHub Actions Pipeline](#10-cicd--github-actions-pipeline)
+11. [iOS App — Swift](#11-ios-app--swift)
+12. [Android App — Java / Jetpack Compose](#12-android-app--java--jetpack-compose)
+13. [Documentation — Docs as Code](#13-documentation--docs-as-code)
+14. [Milestones & Solo Execution Order](#14-milestones--solo-execution-order)
 
 ---
 
@@ -39,17 +38,17 @@ A minimalistic AI-powered planner app where the user:
 
 | Layer | Technology | Reason |
 |---|---|---|
-| API | Spring Boot 3.3 + Java 21 Virtual Threads | Lightweight, production-proven, excellent Azure support |
+| API | Spring Boot 3.3 + Java 21 Virtual Threads | Lightweight, production-proven, excellent containerization |
 | Architecture | Modular Monolith (DDD modules) | Solo-friendly; extract to microservices later |
-| Database | Azure Database for PostgreSQL Flexible Server | Managed, cost-effective, JSON column support |
-| Messaging | Azure Service Bus + Spring Boot Scheduler | Reliable async email/notification dispatch |
-| Email | Azure Communication Services (ACS) | Native Azure, no third-party dependency |
+| Database | PostgreSQL 16+ | Open-source, reliable, JSON column support |
+| Messaging | RabbitMQ + Spring Boot Scheduler | Reliable async email/notification dispatch |
+| Email | JavaMail (SMTP) | Standard, no vendor lock-in |
 | Payments | Stripe Billing + Webhooks | Industry standard |
 | AI | Anthropic Claude Haiku via REST | Fast, cheap, great for structured extraction |
 | iOS | Swift 6 + SwiftUI + AVFoundation | Native, on-device voice, latest concurrency |
 | Android | Java 17 + Jetpack Compose + Room | Modern Android with Java (as requested) |
-| Container | Docker + Azure Container Apps | Serverless containers, autoscale to zero |
-| IaC | Azure Bicep | Native Azure IaC, simpler than Terraform for solo |
+| Container | Docker | Standard containerization |
+| IaC | Terraform / Manual scripts | Infrastructure as code, cloud-agnostic |
 | CI/CD | GitHub Actions | Native, free for public repos |
 | Docs | MkDocs Material + GitHub Pages | Docs-as-code, zero cost |
 
@@ -90,9 +89,9 @@ ai-planner/
 │   │       │   │   ├── notification/ # In-app + email notifications
 │   │       │   │   └── billing/      # Stripe subscription
 │   │       │   └── infrastructure/
-│   │       │       ├── messaging/    # Azure Service Bus
+│   │       │       ├── messaging/    # RabbitMQ producer/consumer
 │   │       │       ├── ai/           # Claude Haiku client
-│   │       │       └── storage/      # Blob storage (voice memos)
+│   │       │       └── storage/      # File storage (voice memos)
 │   │       └── resources/
 │   │           ├── application.yml
 │   │           ├── application-prod.yml
@@ -128,7 +127,7 @@ ai-planner/
 │   ├── build.gradle
 │   └── README.md
 │
-├── infra/                        # Azure Bicep IaC
+├── infra/                        # Infrastructure as Code (Terraform / scripts)
 │   ├── main.bicep
 │   ├── modules/
 │   │   ├── containerApp.bicep
@@ -349,15 +348,15 @@ gh label create "needs-triage" --color fbca04
 ┌────────▼────────┐                    ┌─────────▼────────────┐
 │ PLANNER MODULE  │                    │ NOTIFICATION MODULE   │
 │  - Events       │                    │  - In-chat messages   │
-│  - To-do items  │                    │  - Email (ACS)        │
+│  - To-do items  │                    │  - Email (SMTP)       │
 │  - Recurrence   │                    │  - Push (FCM/APNs)    │
 └─────────────────┘                    └──────────────────────┘
          │                                        │
 ┌────────▼────────────────────────────────────────▼──────────┐
 │              INFRASTRUCTURE LAYER (Shared)                   │
-│  - Azure Service Bus producer/consumer                       │
+│  - RabbitMQ producer/consumer                                │
 │  - PostgreSQL (Spring Data JPA)                              │
-│  - Azure Blob (voice memo storage)                           │
+│  - File storage (voice memo storage)                         │
 │  - Claude Haiku REST client                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -374,7 +373,7 @@ Each module exposes only a public API interface. Cross-module calls go through i
 Chat messages are never updated or deleted — only appended. Notifications sent by the system are stored as messages with `sender_type = SYSTEM`.
 
 **4. Idempotent notification dispatch**
-Notifications carry a `deduplication_key`. Azure Service Bus + database unique constraint prevent double-sending.
+Notifications carry a `deduplication_key`. RabbitMQ + database unique constraint prevent double-sending.
 
 ---
 
@@ -440,7 +439,7 @@ CREATE TABLE messages (
     sender_type         VARCHAR(20) NOT NULL,     -- USER | AI | SYSTEM
     content_type        VARCHAR(20) NOT NULL DEFAULT 'TEXT',  -- TEXT | VOICE_MEMO | NOTIFICATION
     text_content        TEXT,
-    voice_memo_url      VARCHAR(500),             -- Azure Blob URL (voice memos)
+    voice_memo_url      VARCHAR(500),             -- file storage URL (voice memos)
     voice_transcript    TEXT,                     -- transcribed on-device, stored here
     ai_model            VARCHAR(50),              -- e.g. claude-haiku-4-5 (for AI messages)
     metadata            JSONB,                    -- { "event_ids": [...], "todo_ids": [...] }
@@ -612,9 +611,8 @@ CREATE INDEX idx_notif_upcoming ON scheduled_notifications(scheduled_for)
     <artifactId>spring-boot-starter-validation</artifactId></dependency>
 
   <!-- Messaging -->
-  <dependency><groupId>com.azure.spring</groupId>
-    <artifactId>spring-cloud-azure-starter-servicebus</artifactId>
-    <version>5.17.0</version></dependency>
+  <dependency><groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId></dependency>
 
   <!-- HTTP Client (for Claude & Stripe) -->
   <dependency><groupId>org.springframework.boot</groupId>
@@ -624,8 +622,7 @@ CREATE INDEX idx_notif_upcoming ON scheduled_notifications(scheduled_for)
   <dependency><groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-actuator</artifactId></dependency>
   <dependency><groupId>io.micrometer</groupId>
-    <artifactId>micrometer-registry-azure-monitor</artifactId>
-    <version>1.13.0</version></dependency>
+    <artifactId>micrometer-registry-prometheus</artifactId></dependency>
 
   <!-- OpenAPI Docs -->
   <dependency><groupId>org.springdoc</groupId>
@@ -679,12 +676,12 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  # Azure Service Bus
-  cloud:
-    azure:
-      servicebus:
-        connection-string: ${AZURE_SERVICEBUS_CONNECTION_STRING}
-        namespace: ${AZURE_SERVICEBUS_NAMESPACE}
+  # RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 server:
   port: 8080
@@ -901,7 +898,7 @@ public class NotificationPoller {
 }
 ```
 
-### Email Consumer (Azure Service Bus)
+### Email Consumer (RabbitMQ)
 
 ```java
 @Component
@@ -910,7 +907,7 @@ public class EmailDispatchConsumer {
 
     private final EmailService emailService;
 
-    @ServiceBusListener(destination = "email-dispatch")
+    @RabbitListener(queues = "email-dispatch")
     public void onEmailMessage(NotificationPayload payload) {
         emailService.send(
             payload.getUserEmail(),
@@ -920,21 +917,21 @@ public class EmailDispatchConsumer {
     }
 }
 
-// Azure Communication Services email sender
+// Standard JavaMail email sender
 @Service
-public class AzureEmailService implements EmailService {
+public class JavaMailEmailService implements EmailService {
 
-    private final EmailClient emailClient;     // injected from ACS SDK
+    private final JavaMailSender mailSender;
     private final String senderAddress;
 
     public void send(String to, String subject, String body) {
-        EmailMessage message = new EmailMessage()
-            .setSenderAddress(senderAddress)
-            .setToRecipients(new EmailAddress(to))
-            .setSubject(subject)
-            .setBodyHtml(renderHtmlTemplate(subject, body));
-
-        emailClient.beginSend(message).getFinalResult();
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderAddress);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(body);
+        
+        mailSender.send(message);
     }
 }
 ```
@@ -1091,59 +1088,57 @@ ENTRYPOINT ["java", \
   "org.springframework.boot.loader.launch.JarLauncher"]
 ```
 
-### `docker-compose.yml` — Local Dev
+### Local Development — Docker
 
-```yaml
-version: "3.9"
-services:
+For local development, use individual Docker containers:
 
-  api:
-    build:
-      context: ./api
-      target: runtime
-    ports: ["8080:8080"]
-    environment:
-      SPRING_PROFILES_ACTIVE: local
-      DB_URL: jdbc:postgresql://postgres:5432/aiplanner
-      DB_USER: aiplanner
-      DB_PASSWORD: localpassword
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID}
-      AZURE_SERVICEBUS_CONNECTION_STRING: ${AZURE_SERVICEBUS_CONNECTION_STRING}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+```bash
+# Start PostgreSQL
+docker run -d --name postgres-local \
+  -e POSTGRES_DB=aiplanner \
+  -e POSTGRES_USER=aiplanner \
+  -e POSTGRES_PASSWORD=localpassword \
+  -p 5432:5432 \
+  postgres:16-alpine
 
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: aiplanner
-      POSTGRES_USER: aiplanner
-      POSTGRES_PASSWORD: localpassword
-    ports: ["5432:5432"]
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aiplanner"]
-      interval: 5s
-      retries: 5
+# Start RabbitMQ
+docker run -d --name rabbitmq-local \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  rabbitmq:4-management-alpine
 
-  # Local Stripe webhook forwarding
-  stripe-cli:
-    image: stripe/stripe-cli:latest
-    command: listen --forward-to api:8080/api/v1/billing/webhook
-    environment:
-      STRIPE_API_KEY: ${STRIPE_SECRET_KEY}
+# Build and start Auth Server
+docker build -t ai-planner-auth:local ./auth
+docker run -d --name auth-local \
+  -e SPRING_PROFILES_ACTIVE=local \
+  -e DB_HOST=postgres-local \
+  -e DB_NAME=aiplanner \
+  -e DB_USER=aiplanner \
+  -e DB_PASS=localpassword \
+  -p 9000:9000 \
+  ai-planner-auth:local
 
-volumes:
-  postgres_data:
+# Build and start API Server
+docker build -t ai-planner-api:local ./api
+docker run -d --name api-local \
+  -e SPRING_PROFILES_ACTIVE=local \
+  -e DB_HOST=postgres-local \
+  -e DB_NAME=aiplanner \
+  -e DB_USER=aiplanner \
+  -e DB_PASS=localpassword \
+  -e RABBITMQ_HOST=rabbitmq-local \
+  -e AUTH_SERVER_URI=http://auth-local:9000 \
+  -p 8080:8080 \
+  ai-planner-api:local
+```
+
+### Running Migrations
+
+Liquibase runs automatically when each container starts. Check logs:
+
+```bash
+docker logs api-local
+docker logs auth-local
 ```
 
 ### `.env.example`
@@ -1153,221 +1148,95 @@ ANTHROPIC_API_KEY=sk-ant-...
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PREMIUM_PRICE_ID=price_...
-AZURE_SERVICEBUS_CONNECTION_STRING=Endpoint=sb://...
+RABBITMQ_HOST=rabbitmq.example.com
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
 ```
 
 ---
 
-## 10. Azure Infrastructure Setup
+## 10. Infrastructure Setup (Sliplane Deployment Model)
 
 ### Prerequisites
 
-```bash
-# Install tools
-brew install azure-cli bicep
-az login
-az account set --subscription "<YOUR_SUBSCRIPTION_ID>"
+- Docker installed and running
+- PostgreSQL 16+ database (managed or self-hosted)
+- RabbitMQ service (managed or self-hosted)
+- Private Container Registry credentials (optional but recommended for private repos)
 
-# Register providers
-az provider register --namespace Microsoft.App
-az provider register --namespace Microsoft.Communication
-az provider register --namespace Microsoft.ServiceBus
-az provider register --namespace Microsoft.DBforPostgreSQL
-```
+### Environment Configuration
 
-### `infra/main.bicep`
-
-```bicep
-targetScope = 'subscription'
-
-param environment string = 'prod'
-param location string = 'westeurope'
-param appName string = 'aiplanner'
-
-var resourceGroupName = '${appName}-${environment}-rg'
-
-resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: resourceGroupName
-  location: location
-}
-
-// Key Vault
-module keyVault 'modules/keyVault.bicep' = {
-  scope: rg
-  name: 'keyVault'
-  params: { appName: appName, environment: environment, location: location }
-}
-
-// PostgreSQL Flexible Server
-module postgres 'modules/postgres.bicep' = {
-  scope: rg
-  name: 'postgres'
-  params: {
-    appName: appName
-    environment: environment
-    location: location
-    keyVaultName: keyVault.outputs.keyVaultName
-  }
-}
-
-// Azure Service Bus
-module serviceBus 'modules/serviceBus.bicep' = {
-  scope: rg
-  name: 'serviceBus'
-  params: { appName: appName, environment: environment, location: location }
-}
-
-// Azure Communication Services
-module communication 'modules/communication.bicep' = {
-  scope: rg
-  name: 'communication'
-  params: { appName: appName, environment: environment, location: location }
-}
-
-// Container App (API)
-module containerApp 'modules/containerApp.bicep' = {
-  scope: rg
-  name: 'containerApp'
-  params: {
-    appName: appName
-    environment: environment
-    location: location
-    dbUrl: postgres.outputs.connectionString
-    serviceBusConnectionString: serviceBus.outputs.connectionString
-    keyVaultName: keyVault.outputs.keyVaultName
-  }
-}
-```
-
-### `infra/modules/postgres.bicep`
-
-```bicep
-param appName string
-param environment string
-param location string
-param keyVaultName string
-
-var serverName = '${appName}-${environment}-pg'
-var adminUser = 'pgadmin'
-
-resource pgServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = {
-  name: serverName
-  location: location
-  sku: {
-    name: 'Standard_B1ms'   // 1 vCore, 2GiB RAM — cost-effective MVP
-    tier: 'Burstable'
-  }
-  properties: {
-    version: '16'
-    administratorLogin: adminUser
-    administratorLoginPassword: adminPassword   // from Key Vault reference
-    storage: { storageSizeGB: 32 }
-    backup: {
-      backupRetentionDays: 7
-      geoRedundantBackup: 'Disabled'
-    }
-    highAvailability: { mode: 'Disabled' }     // enable for production scale
-  }
-}
-
-resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-01-preview' = {
-  parent: pgServer
-  name: 'aiplanner'
-}
-
-// Allow Azure services
-resource firewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-12-01-preview' = {
-  parent: pgServer
-  name: 'AllowAzureServices'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
-
-output connectionString string = 'jdbc:postgresql://${pgServer.properties.fullyQualifiedDomainName}:5432/aiplanner?sslmode=require'
-```
-
-### `infra/modules/containerApp.bicep`
-
-```bicep
-param appName string
-param environment string
-param location string
-param dbUrl string
-param serviceBusConnectionString string
-param keyVaultName string
-
-// Container Apps Environment
-resource caEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: '${appName}-${environment}-cae'
-  location: location
-  properties: {
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-    }
-  }
-}
-
-// Container App
-resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
-  name: '${appName}-${environment}-api'
-  location: location
-  properties: {
-    managedEnvironmentId: caEnv.id
-    configuration: {
-      ingress: {
-        external: true
-        targetPort: 8080
-        transport: 'auto'
-      }
-      secrets: [
-        { name: 'db-url', value: dbUrl }
-        { name: 'servicebus-conn', value: serviceBusConnectionString }
-        // Sensitive secrets fetched from Key Vault at deploy time
-      ]
-    }
-    template: {
-      scale: {
-        minReplicas: 0          // scale to zero when idle — cost savings
-        maxReplicas: 3
-        rules: [{
-          name: 'http-scale'
-          http: { metadata: { concurrentRequests: '30' } }
-        }]
-      }
-      containers: [{
-        name: 'api'
-        image: 'ghcr.io/OWNER/ai-planner-api:latest'
-        resources: { cpu: json('0.5'), memory: '1Gi' }
-        env: [
-          { name: 'SPRING_PROFILES_ACTIVE', value: 'prod' }
-          { name: 'DB_URL', secretRef: 'db-url' }
-          { name: 'AZURE_SERVICEBUS_CONNECTION_STRING', secretRef: 'servicebus-conn' }
-        ]
-      }]
-    }
-  }
-}
-
-output fqdn string = containerApp.properties.configuration.ingress.fqdn
-```
-
-### Deploy Commands
+Create a `.env` file in the project root with the following variables:
 
 ```bash
-# First-time setup
-az deployment sub create \
-  --location westeurope \
-  --template-file infra/main.bicep \
-  --parameters infra/parameters/prod.bicepparam
+# Database
+DB_HOST=postgres.example.com
+DB_NAME=aiplanner
+DB_USER=postgres
+DB_PASS=<secure-password>
 
-# Update only container app (after image push)
-az deployment group create \
-  --resource-group aiplanner-prod-rg \
-  --template-file infra/modules/containerApp.bicep \
-  --parameters environment=prod
+# RabbitMQ
+RABBITMQ_HOST=rabbitmq.example.com
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=<secure-password>
+
+# OAuth2 Auth Server
+AUTH_SERVER_URI=https://auth.example.com
+
+# AI & Integrations
+ANTHROPIC_API_KEY=<your-api-key>
+STRIPE_SECRET_KEY=<your-secret-key>
+STRIPE_WEBHOOK_SECRET=<your-webhook-secret>
 ```
+
+### Building Container Images
+
+Both Auth Server and API Server include Dockerfiles with Java 21 JRE.
+
+```bash
+# Build Auth Server
+docker build -t ai-planner-auth:latest ./auth
+
+# Build API Server
+docker build -t ai-planner-api:latest ./api
+```
+
+### Running Containers
+
+Migrations run automatically on container startup via Liquibase.
+
+```bash
+# Auth Server (runs migrations on startup)
+docker run -d \
+  --name auth-server \
+  --env-file .env \
+  -p 9000:9000 \
+  ai-planner-auth:latest
+
+# API Server (runs migrations on startup)
+docker run -d \
+  --name api-server \
+  --env-file .env \
+  -e AUTH_SERVER_URI=http://auth-server:9000 \
+  -p 8080:8080 \
+  ai-planner-api:latest
+```
+
+### Deployment to Sliplane
+
+Push images to your container registry and update your Sliplane deployment configuration:
+
+```bash
+# Tag and push images
+docker tag ai-planner-auth:latest registry.example.com/ai-planner-auth:latest
+docker push registry.example.com/ai-planner-auth:latest
+
+docker tag ai-planner-api:latest registry.example.com/ai-planner-api:latest
+docker push registry.example.com/ai-planner-api:latest
+```
+
+Then refer to [MIGRATIONS.md](MIGRATIONS.md) for details on how migrations run automatically on each container restart.
 
 ---
 
@@ -1468,61 +1337,68 @@ jobs:
 ### `.github/workflows/api-cd.yml`
 
 ```yaml
-name: API CD — Deploy to Azure
+name: API CD — Build & Push to Registry
 
 on:
   push:
     branches: [main]
-    paths: ["api/**", "infra/**"]
+    paths: ["api/**", "auth/**"]
 
 permissions:
-  id-token: write     # OIDC → no long-lived secrets
   contents: read
   packages: write
 
 jobs:
-  deploy:
-    name: Deploy to Azure Container Apps
+  build-and-push:
+    name: Build & Push Images
     runs-on: ubuntu-latest
     environment: production
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push Image
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_HOST }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build & Push Auth Server
+        uses: docker/build-push-action@v6
+        with:
+          context: auth
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_HOST }}/ai-planner-auth:${{ github.sha }}
+            ${{ secrets.REGISTRY_HOST }}/ai-planner-auth:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & Push API Server
         uses: docker/build-push-action@v6
         with:
           context: api
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/ai-planner-api:${{ github.sha }}
+          tags: |
+            ${{ secrets.REGISTRY_HOST }}/ai-planner-api:${{ github.sha }}
+            ${{ secrets.REGISTRY_HOST }}/ai-planner-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Deploy Bicep Infrastructure
-        uses: azure/arm-deploy@v2
-        with:
-          scope: subscription
-          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          region: westeurope
-          template: infra/main.bicep
-          parameters: infra/parameters/prod.bicepparam
-
-      - name: Update Container App Image
+      - name: Notify Deployment System
         run: |
-          az containerapp update \
-            --name aiplanner-prod-api \
-            --resource-group aiplanner-prod-rg \
-            --image ghcr.io/${{ github.repository_owner }}/ai-planner-api:${{ github.sha }}
-
-      - name: Health Check
-        run: |
-          sleep 30
-          curl -f https://aiplanner-prod-api.azurecontainerapps.io/actuator/health
+          # Send webhook to your deployment system (Sliplane, webhookrelay, etc.)
+          curl -X POST ${{ secrets.DEPLOYMENT_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "auth_image": "${{ secrets.REGISTRY_HOST }}/ai-planner-auth:${{ github.sha }}",
+              "api_image": "${{ secrets.REGISTRY_HOST }}/ai-planner-api:${{ github.sha }}",
+              "timestamp": "'$(date -u +'%Y-%m-%dT%H:%M:%SZ')'"
+            }'
 ```
 
 ### `.github/workflows/ios-ci.yml`
@@ -2085,7 +1961,7 @@ nav:
       - Billing: api/billing.md
   - iOS: ios/setup.md
   - Android: android/setup.md
-  - Infrastructure: infra/azure.md
+  - Infrastructure: infra/deployment.md
   - Contributing: contributing.md
 
 plugins:
@@ -2141,7 +2017,7 @@ Add to `api-cd.yml` after deploy:
 - name: Generate & Commit OpenAPI Spec
   run: |
     sleep 10   # wait for container to be healthy
-    curl -s https://aiplanner-prod-api.azurecontainerapps.io/v3/api-docs \
+    curl -s http://api-server.example.com/v3/api-docs \
       -o docs/docs/api/openapi.json
     git config user.name "github-actions[bot]"
     git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -2162,23 +2038,25 @@ MILESTONE 1 — API Foundation (Weeks 1–3)
 ├── [ ] Flyway migrations (V1 + V2)
 ├── [ ] Auth module (JWT, register, login)
 ├── [ ] User module (profile)
-├── [ ] Docker + docker-compose local dev
+├── [ ] Docker containerization (multi-stage builds)
 ├── [ ] Unit tests + ArchUnit boundary tests
 └── [ ] API CI pipeline (GitHub Actions)
 
-MILESTONE 2 — Azure Infrastructure (Week 4)
-├── [ ] Azure account + resource group setup
-├── [ ] Bicep IaC (postgres, service bus, container apps)
-├── [ ] Azure Communication Services (email)
-├── [ ] Key Vault secrets + OIDC GitHub federation
-├── [ ] CD pipeline (deploy on main merge)
+MILESTONE 2 — Deployment Infrastructure (Week 4)
+├── [ ] Set up PostgreSQL (managed or self-hosted)
+├── [ ] Set up RabbitMQ (managed or self-hosted)
+├── [ ] Configure production SMTP mail service
+├── [ ] Set up container registry (Docker Hub, GHCR, etc.)
+├── [ ] Create environment configuration files (.env, secrets)
+├── [ ] Deploy with Sliplane or custom orchestration
+├── [ ] CD pipeline (build & push images on main merge)
 └── [ ] Health check + basic monitoring
 
 MILESTONE 3 — Core Features (Weeks 5–7)
 ├── [ ] Chat module (message persistence + context window)
 ├── [ ] Claude Haiku integration + intent extraction
 ├── [ ] Planner module (events + todos)
-├── [ ] Notification scheduler + Service Bus consumers
+├── [ ] Notification scheduler + RabbitMQ consumers
 ├── [ ] Push notification registration endpoint
 ├── [ ] Stripe billing (checkout + webhooks)
 └── [ ] AI usage tracking (free tier limit)
@@ -2220,7 +2098,7 @@ MILESTONE 6 — Launch Prep (Week 14)
 >
 > - Use **GitHub Copilot** or Claude Code CLI inside your IDE to accelerate boilerplate
 > - Keep the free tier generous enough to acquire users, then convert with Stripe
-> - Azure Container Apps scale-to-zero means $0 cost when idle — perfect for MVP
+> - Containerize early — it simplifies deployment and scaling from day one
 > - Start iOS first if you are primarily an iPhone user — dogfood your own product
 > - Keep the notification poller simple before adding Service Bus — a scheduled task is enough for MVP scale
 > - Commit to trunk-based development (short-lived branches) to avoid merge hell when working solo

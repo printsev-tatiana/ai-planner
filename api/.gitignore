@@ -1,0 +1,24 @@
+# Build
+target/
+*.jar
+*.war
+
+# IDE
+.vscode/
+.idea/
+*.iml
+.metadata/
+.classpath
+.project
+.settings/
+
+# Maven
+.mvn/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+logs/

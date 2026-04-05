@@ -2,6 +2,27 @@
     "configurations": [
         {
             "type": "java",
+            "name": "AuthServerApplication",
+            "request": "launch",
+            "mainClass": "com.tp.aiplanner.auth.AuthServerApplication",
+            "projectName": "aiplanner-auth"
+        },
+        {
+            "type": "java",
+            "name": "AiplannerApplication",
+            "request": "launch",
+            "mainClass": "com.tp.aiplanner.AiplannerApplication",
+            "projectName": "ai-planner-api"
+        },
+        {
+            "type": "java",
+            "name": "AuthServerApplication",
+            "request": "launch",
+            "mainClass": "main.java.com.tp.aiplanner.auth.AuthServerApplication",
+            "projectName": ""
+        },
+        {
+            "type": "java",
             "name": "Spring Boot-Application<ai-planner-api>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
